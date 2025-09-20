@@ -727,3 +727,6 @@ def create_app(config_name='default'):
 if __name__ == '__main__':
     app = create_app('development')
     app.run(debug=True, port=5000)
+else:
+    # For production (PythonAnywhere imports this)
+    app = create_app('production')
