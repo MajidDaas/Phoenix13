@@ -1,0 +1,50 @@
+[
+    {
+        "id": "c61d0bf3-3c9a-41f1-981f-94ce742c45ba",
+        "name": "Demo Election",
+        "description": "A test election for demonstration purposes.",
+        "created_by": "a325dd79-3fd5-4f32-a416-bb298889f8ab",
+        "created_at": "2025-09-19T08:56:18.224755Z",
+        "is_open": true,
+        "start_time": null,
+        "end_time": null,
+        "eligible_voter_emails": [
+            "demo_user_a325dd79@example.com"
+        ],
+        "admin_user_ids": [
+            "a325dd79-3fd5-4f32-a416-bb298889f8ab"
+        ]
+    },
+    {
+        "id": "262d2530-6d0f-4914-bdb6-5bf737b021d5",
+        "name": "Demo Election",
+        "description": "A test election for demonstration purposes.",
+        "created_by": "9ebf6862-4e40-4a82-a837-d0e63a218860",
+        "created_at": "2025-09-19T09:02:23.081843Z",
+        "is_open": true,
+        "start_time": null,
+        "end_time": null,
+        "eligible_voter_emails": [
+            "demo_user_9ebf6862@example.com"
+        ],
+        "admin_user_ids": [
+            "9ebf6862-4e40-4a82-a837-d0e63a218860"
+        ]
+    },
+    {
+        "id": "3ae8317f-88ed-4871-917a-4127341e05f7",
+        "name": "Demo Election",
+        "description": "A test election for demonstration purposes.",
+        "created_by": "2f7ae3dd-dc74-455d-b648-5867da6105cc",
+        "created_at": "2025-09-19T09:09:38.209241Z",
+        "is_open": true,
+        "start_time": null,
+        "end_time": null,
+        "eligible_voter_emails": [
+            "demo_user_2f7ae3dd@example.com"
+        ],
+        "admin_user_ids": [
+            "2f7ae3dd-dc74-455d-b648-5867da6105cc"
+        ]
+    }
+]
