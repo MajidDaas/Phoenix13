@@ -1,9 +1,8 @@
-// js/voting.js - Voting Module
-
 const VotingModule = {
-    // --- Initialize Voting State and UI Listeners ---
+    // Initialize Voting State and UI Listeners
     init: function () {
         console.log("VotingModule.init: Initializing voting module...");
+        
         // Ensure state exists
         window.State = window.State || {};
         window.State.selectedCandidates = window.State.selectedCandidates || [];
@@ -21,7 +20,7 @@ const VotingModule = {
         console.log("VotingModule.init: Voting module initialized.");
     },
 
-    // --- Attach Event Listeners ---
+    // Attach Event Listeners
     attachEventListeners: function () {
         const submitVoteBtn = document.getElementById('submitVoteBtn');
         if (submitVoteBtn) {
@@ -31,13 +30,12 @@ const VotingModule = {
         } else {
             console.warn("VotingModule.attachEventListeners: Submit vote button not found.");
         }
-        // Sorting and search listeners are handled separately
     },
 
-    // --- Show Candidate Details (Inline) ---
+    // Show Candidate Details (Inline)
     showCandidateDetails: function (candidateIdOrData) {
         console.log(`VotingModule.showCandidateDetails: Showing details for candidate ID ${candidateIdOrData}`);
-        // Determine if input is ID or full data object
+        
         let candidateData;
         if (typeof candidateIdOrData === 'number' || typeof candidateIdOrData === 'string') {
             candidateData = window.State.candidates?.find(c => c.id === parseInt(candidateIdOrData));
@@ -59,12 +57,11 @@ const VotingModule = {
         const detailsElement = candidateElement.querySelector(`.candidate-details`);
         if (detailsElement) {
             detailsElement.style.display = 'block';
-            // Store reference to active details for potential global hiding
             window.activeDetails = candidateElement;
         }
     },
 
-    // --- Hide Candidate Details (Inline) ---
+    // Hide Candidate Details (Inline)
     hideCandidateDetails: function (candidateElementOrId) {
         let candidateElement;
         if (typeof candidateElementOrId === 'number' || typeof candidateElementOrId === 'string') {
@@ -78,14 +75,13 @@ const VotingModule = {
             if (detailsElement) {
                 detailsElement.style.display = 'none';
             }
-            // Clear global reference if it matches
             if (window.activeDetails === candidateElement) {
                 window.activeDetails = null;
             }
         }
     },
 
-    // --- Select/Deselect a Candidate ---
+    // Select/Deselect a Candidate
     selectCandidate: function (candidateId) {
         console.log(`VotingModule.selectCandidate: Attempting to select/deselect candidate ID ${candidateId}`);
         candidateId = parseInt(candidateId, 10);
@@ -111,7 +107,7 @@ const VotingModule = {
                 console.log(`VotingModule.selectCandidate: Selected candidate ID ${candidateId}`);
             } else {
                 console.log(`VotingModule.selectCandidate: Cannot select more than 15 candidates.`);
-                Utils.showValidationError('voting.maxCouncilSelected');
+                this.showValidationError('voting.maxCouncilSelected');
                 return;
             }
         }
@@ -120,7 +116,7 @@ const VotingModule = {
         this.updateUI();
     },
 
-    // --- Toggle Executive Selection ---
+    // Toggle Executive Selection
     toggleExecutive: function (candidateId) {
         console.log(`VotingModule.toggleExecutive: Attempting to toggle executive for candidate ID ${candidateId}`);
         candidateId = parseInt(candidateId, 10);
@@ -130,7 +126,7 @@ const VotingModule = {
 
         if (!isCandidateSelected) {
             console.log(`VotingModule.toggleExecutive: Candidate ID ${candidateId} is not selected as council.`);
-            Utils.showValidationError('voting.selectAsCouncilFirst');
+            this.showValidationError('voting.selectAsCouncilFirst');
             return;
         }
 
@@ -145,7 +141,7 @@ const VotingModule = {
                 console.log(`VotingModule.toggleExecutive: Added candidate ID ${candidateId} to executive.`);
             } else {
                 console.log(`VotingModule.toggleExecutive: Cannot select more than 7 executive officers.`);
-                Utils.showValidationError('voting.maxExecutiveSelected');
+                this.showValidationError('voting.maxExecutiveSelected');
                 return;
             }
         }
@@ -154,9 +150,10 @@ const VotingModule = {
         this.updateUI();
     },
 
-    // --- Update Voting UI based on State ---
+    // Update Voting UI based on State
     updateUI: function () {
         console.log("VotingModule.updateUI: Updating UI based on state...");
+        
         // Update candidate cards (selected/executive states)
         document.querySelectorAll('.candidate-item').forEach(card => {
             const id = parseInt(card.dataset.id, 10);
@@ -166,8 +163,7 @@ const VotingModule = {
             card.classList.toggle('selected', isSelected);
             card.classList.toggle('executive', isExecutive);
 
-            // Update card content or badges if needed (e.g., icons)
-            // Example: Add/remove checkmark icons
+            // Update card content or badges if needed
             let checkmark = card.querySelector('.selection-checkmark');
             if (isSelected && !checkmark) {
                 checkmark = document.createElement('div');
@@ -205,28 +201,24 @@ const VotingModule = {
         console.log("VotingModule.updateUI: UI update complete.");
     },
 
-    // --- Update Submit Button State ---
+    // Update Submit Button State
     updateSubmitButton: function () {
         const submitVoteBtn = document.getElementById('submitVoteBtn');
         if (!submitVoteBtn) return;
 
         const isReady = window.State.selectedCandidates.length === 15 && window.State.executiveCandidates.length === 7;
         submitVoteBtn.disabled = !isReady;
-        if (isReady) {
-            submitVoteBtn.innerHTML = '<i class="fas fa-paper-plane"></i> <span data-i18n="submitVote">Submit Vote</span>';
-        } else {
-            submitVoteBtn.innerHTML = '<i class="fas fa-paper-plane"></i> <span data-i18n="submitVote">Submit Vote</span>'; // Keep text, just disable
-        }
+        submitVoteBtn.innerHTML = '<i class="fas fa-paper-plane"></i> <span data-i18n="submitVote">Submit Vote</span>';
+        
         // Apply translations for the button
         if (typeof I18nModule !== 'undefined' && typeof I18nModule.applyTranslations === 'function') {
             I18nModule.applyTranslations(submitVoteBtn);
         }
     },
 
-    // --- Candidate Search Functionality ---
-    _searchInitialized: false, // Flag to prevent multiple initializations
+    // Candidate Search Functionality
+    _searchInitialized: false,
     initSearch: function () {
-        // Initialize Search Listener (only once)
         if (!this._searchInitialized) {
             const candidateSearchInput = document.getElementById('candidateSearch');
             if (candidateSearchInput) {
@@ -242,7 +234,7 @@ const VotingModule = {
 
     handleSearch: function (event) {
         const searchTerm = event.target.value.toLowerCase().trim();
-        const candidateItems = document.querySelectorAll('#candidateList .candidate-item'); // Target voting tab list
+        const candidateItems = document.querySelectorAll('#candidateList .candidate-item');
 
         candidateItems.forEach(item => {
             const nameElement = item.querySelector('.candidate-name');
@@ -251,37 +243,37 @@ const VotingModule = {
             const fieldText = fieldElement ? fieldElement.textContent.toLowerCase() : '';
 
             if (nameText.includes(searchTerm) || fieldText.includes(searchTerm)) {
-                item.style.display = ''; // Show
+                item.style.display = '';
             } else {
-                item.style.display = 'none'; // Hide
+                item.style.display = 'none';
             }
         });
     },
 
-    // --- Submit Vote using apiClient ---
+    // Submit Vote using apiClient
     submitVote: async function () {
         console.log("VotingModule.submitVote: Preparing to submit vote...");
-        // --- MODIFIED: Check election state from window.State (set by core-main.js) ---
+        
         if (!window.State.electionOpen) {
-            Utils.showMessage('<span data-i18n="electionIsClosed">Voting is currently closed</span>', 'error');
+            this.showValidationError('electionIsClosed');
             return;
         }
         if (!window.State.currentUser) {
-            Utils.showMessage('<span data-i18n="authenticationRequired">You must be authenticated before submitting.</span>', 'error');
+            this.showValidationError('authenticationRequired');
             return;
         }
         if (window.State.selectedCandidates.length !== 15) {
-            Utils.showMessage('<span data-i18n="voting.select15Council">Please select exactly 15 candidates</span>', 'error');
+            this.showValidationError('voting.select15Council');
             return;
         }
         if (window.State.executiveCandidates.length !== 7) {
-            Utils.showMessage('<span data-i18n="voting.select7Executive">Please designate exactly 7 executive officers</span>', 'error');
+            this.showValidationError('voting.select7Executive');
             return;
         }
-        // Ensure all executive candidates are also selected as council members
+        
         const allExecAreCouncil = window.State.executiveCandidates.every(id => window.State.selectedCandidates.includes(id));
         if (!allExecAreCouncil) {
-            Utils.showMessage('<span data-i18n="voting.executiveMustBeCouncil">All executive officers must also be selected as council members.</span>', 'error');
+            this.showValidationError('voting.executiveMustBeCouncil');
             return;
         }
 
@@ -295,35 +287,30 @@ const VotingModule = {
                 }
             }
 
-            // --- MODIFIED: Use apiClient to submit vote ---
             const response = await apiClient.submitVote(
                 window.State.selectedCandidates,
                 window.State.executiveCandidates
-            ); // Uses apiClient
+            );
             console.log("VotingModule.submitVote: API response received:", response);
 
             if (response && response.message) {
-                // --- MODIFIED: Use i18n keys for success messages ---
-                const successMessage = `<span data-i18n="thankYouForVoting">Thank You for Voting!</span><br><span data-i18n="voteSubmittedMessage">Your vote has been successfully recorded.</span>`;
-                Utils.showMessage(successMessage, 'success');
+                const successMessage = '<span data-i18n="thankYouForVoting">Thank You for Voting!</span><br><span data-i18n="voteSubmittedMessage">Your vote has been successfully recorded.</span>';
+                this.showSuccessMessage(successMessage);
 
                 // Reset selections
                 window.State.selectedCandidates = [];
                 window.State.executiveCandidates = [];
 
                 // Update user session/vote status
-                // Note: Core state (window.State.userHasVoted) is typically updated by core-main.js
-                // after a successful vote or initial load. We can set it here too for immediate UI update.
                 if (window.State.currentUser) {
                     window.State.currentUser.hasVoted = true;
                 }
-                window.State.userHasVoted = true; // Set flag for UI logic
+                window.State.userHasVoted = true;
 
                 // Update UI
                 this.updateUI();
 
-                // Update voting tab content (e.g., show thank you message)
-                // This function should be defined in core-main.js or similar
+                // Update voting tab content
                 if (typeof updateVotingTabContent === 'function') {
                     updateVotingTabContent();
                 }
@@ -334,44 +321,70 @@ const VotingModule = {
                 }
 
             } else {
-                // Handle unexpected response structure
                 console.error("VotingModule.submitVote: Unexpected response structure:", response);
-                Utils.showMessage('voting.submitUnexpectedError', 'error');
+                this.showValidationError('voting.submitUnexpectedError');
             }
 
         } catch (error) {
             console.error("VotingModule.submitVote: Error occurred:", error);
-            // --- MODIFIED: Use i18n keys for error messages ---
             if (error.message && error.message.includes('already voted')) {
-                Utils.showMessage('voting.alreadyVotedError', 'error');
+                this.showValidationError('voting.alreadyVotedError');
             } else if (error.message && error.message.includes('closed')) {
-                 Utils.showMessage('voting.electionClosedError', 'error');
+                this.showValidationError('voting.electionClosedError');
             } else if (error instanceof TypeError && error.message.includes('fetch')) {
-                Utils.showMessage('voting.networkError', 'error');
+                this.showValidationError('voting.networkError');
             } else {
-                // Generic error message with details
-                Utils.showMessage(`voting.submitGenericError|${error.message || 'Unknown error'}`, 'error');
+                this.showValidationError(`voting.submitGenericError|${error.message || 'Unknown error'}`);
             }
         } finally {
-            // Re-enable submit button
             if (submitBtn) {
-                // Text is updated by updateUI or above, just ensure it's enabled
                 submitBtn.disabled = false;
-                // Ensure spinner is gone if error happened early
                 if (submitBtn.innerHTML.includes('fa-spinner')) {
-                     this.updateSubmitButton(); // Reset to correct state/text
+                    this.updateSubmitButton();
                 }
             }
+        }
+    },
+
+    // Helper methods
+    showValidationError: function(messageKey) {
+        if (typeof Utils !== 'undefined' && typeof Utils.showMessage === 'function') {
+            Utils.showMessage(messageKey, 'error');
+        } else {
+            // Fallback to simple alert
+            const messages = {
+                'voting.maxCouncilSelected': 'Please select exactly 15 candidates',
+                'voting.selectAsCouncilFirst': 'Please select candidate as council member first',
+                'voting.maxExecutiveSelected': 'Please designate exactly 7 executive officers',
+                'electionIsClosed': 'Voting is currently closed',
+                'authenticationRequired': 'You must be authenticated before submitting.',
+                'voting.select15Council': 'Please select exactly 15 candidates',
+                'voting.select7Executive': 'Please designate exactly 7 executive officers',
+                'voting.executiveMustBeCouncil': 'All executive officers must also be selected as council members.',
+                'voting.alreadyVotedError': 'You have already voted in this election',
+                'voting.electionClosedError': 'Election is currently closed',
+                'voting.networkError': 'Network error occurred. Please try again.',
+                'voting.submitUnexpectedError': 'Unexpected error occurred. Please try again.'
+            };
+            alert(messages[messageKey] || messageKey);
+        }
+    },
+
+    showSuccessMessage: function(message) {
+        if (typeof Utils !== 'undefined' && typeof Utils.showMessage === 'function') {
+            Utils.showMessage(message, 'success');
+        } else {
+            // Fallback to simple alert
+            alert('Vote submitted successfully!');
         }
     }
 };
 
 // Initialize the Voting Module when the DOM is loaded
 document.addEventListener('DOMContentLoaded', function () {
-    // Ensure apiClient is available
     if (typeof apiClient === 'undefined') {
-         console.error("VotingModule: apiClient is not defined. Ensure js/api.js is loaded first.");
-         return;
+        console.error("VotingModule: apiClient is not defined. Ensure js/api.js is loaded first.");
+        return;
     }
     VotingModule.init();
 });

@@ -1,12 +1,8 @@
-// js/auth.js - Authentication Module (Multi-Election Version)
-// (Assuming the structure from the provided full updated file, correcting the demoAuth call)
-
 const AuthModule = {
-    // --- MODIFIED: Simplified checkAuthStatus to use apiClient ---
+    // Check authentication status
     checkAuthStatus: async function () {
         console.log("AuthModule.checkAuthStatus: Initiating session check...");
         try {
-            // getSession is global, so using apiClient is correct
             const sessionData = await apiClient.getSession();
             console.log("AuthModule.checkAuthStatus: Session data received:", sessionData);
             if (sessionData.authenticated) {
@@ -21,11 +17,11 @@ const AuthModule = {
         } catch (error) {
             console.error("AuthModule.checkAuthStatus: Error occurred:", error);
             window.State.currentUser = null;
-            throw error;
+            return false;
         }
     },
 
-    // --- MODIFIED: signInWithGoogle now triggers backend redirect ---
+    // Sign in with Google
     signInWithGoogle: async function () {
         console.log("AuthModule.signInWithGoogle: Initiating Google Sign-In...");
         try {
@@ -47,48 +43,28 @@ const AuthModule = {
 
         } catch (error) {
             console.error("AuthModule.signInWithGoogle: Error:", error);
-            alert("An error occurred during sign-in initiation. Please try again.");
-            const googleSigninBtn = document.getElementById('googleSigninBtn');
-            if (googleSigninBtn) {
-                googleSigninBtn.disabled = false;
-                googleSigninBtn.innerHTML = '<i class="fab fa-google"></i> <span data-i18n="signInWithGoogle">Sign in with Google</span>';
-                if (typeof I18nModule !== 'undefined' && typeof I18nModule.applyTranslations === 'function') {
-                    I18nModule.applyTranslations(googleSigninBtn);
-                }
-            }
-            const authSkeletonScreen = document.getElementById('authSkeletonScreen');
-            if (authSkeletonScreen) {
-                authSkeletonScreen.style.display = 'none';
-            }
+            this.showAuthError("An error occurred during sign-in initiation. Please try again.");
+            this.resetAuthButtons();
         }
     },
 
-    // --- MODIFIED: logout now uses apiClient ---
+    // Logout
     logout: async function () {
         console.log("AuthModule.logout: Initiating logout...");
         try {
-            // logout is global, so using apiClient is correct
             const response = await apiClient.logout();
             console.log("AuthModule.logout: Logout successful:", response);
-            window.State.currentUser = null;
-            window.State.currentElectionId = null;
-            apiClient.setCurrentElectionId(null);
-            localStorage.removeItem('selectedElectionId');
-            localStorage.removeItem('hasSeenVotingInstructions');
+            this.clearAuthState();
             window.location.reload();
         } catch (error) {
             console.error("AuthModule.logout: Error occurred:", error);
-            alert("An error occurred during logout. Redirecting to login.");
-            window.State.currentUser = null;
-            window.State.currentElectionId = null;
-            apiClient.setCurrentElectionId(null);
-            localStorage.removeItem('selectedElectionId');
-            localStorage.removeItem('hasSeenVotingInstructions');
+            this.showAuthError("An error occurred during logout. Redirecting to login.");
+            this.clearAuthState();
             window.location.reload();
         }
     },
 
-    // --- CORRECTED: Demo Authentication - Uses direct fetch for global endpoint ---
+    // Demo Authentication
     demoAuth: async function () {
         console.log("AuthModule.demoAuth: Initiating demo login...");
         const demoBtn = document.getElementById('demoAuthBtn');
@@ -109,59 +85,66 @@ const AuthModule = {
         }
 
         try {
-            // --- CORRECTION: Use direct fetch for the global /api/auth/demo endpoint ---
-            // Do NOT use apiClient._makeRequest as it requires an electionId
-            const response = await fetch('/api/auth/demo', {
-                 method: 'POST',
-                 credentials: 'include', // Include cookies/session - crucial for authentication
-                 headers: {
-                     'Content-Type': 'application/json' // Good practice for POST requests
-                 }
-                 // No body needed for demo auth creation
-            });
-
-            if (!response.ok) {
-                 const errorData = await response.json().catch(() => ({}));
-                 throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
-            }
-
-            const data = await response.json();
+            const data = await apiClient.demoAuth();
             console.log("AuthModule.demoAuth: Demo login response:", data);
 
             if (data.authenticated) {
                 window.State.currentUser = data.user;
                 console.log("AuthModule.demoAuth: Demo login successful for:", window.State.currentUser);
 
-                // Store the demo election ID provided by the backend
                 if (data.demo_election_id) {
-                     window.demoElectionId = data.demo_election_id;
-                     console.log("AuthModule.demoAuth: Demo election ID received:", window.demoElectionId);
+                    window.demoElectionId = data.demo_election_id;
+                    console.log("AuthModule.demoAuth: Demo election ID received:", window.demoElectionId);
                 }
 
-                // Reload the page to trigger the main initialization flow in core-main.js
-                // which will check auth status, find the demo election ID,
-                // and proceed accordingly.
                 window.location.reload();
-
             } else {
                 throw new Error(data.message || "Demo login failed");
             }
         } catch (error) {
             console.error("AuthModule.demoAuth: Error:", error);
-            if (typeof Utils !== 'undefined' && typeof Utils.showMessage === 'function') {
-                 Utils.showMessage(`auth.demoFailed|${error.message}`, 'error');
-            } else {
-                 alert("Demo login failed: " + (error.message || "Unknown error"));
-            }
-
+            this.showAuthError(`Demo login failed: ${error.message || 'Unknown error'}`);
+        } finally {
             if (authSkeletonScreen) {
                 authSkeletonScreen.style.display = 'none';
             }
-        } finally {
             if (demoBtn) {
                 demoBtn.innerHTML = originalBtnContent;
                 demoBtn.disabled = false;
             }
+        }
+    },
+
+    // Helper methods
+    clearAuthState: function() {
+        window.State.currentUser = null;
+        window.State.currentElectionId = null;
+        apiClient.setCurrentElectionId(null);
+        localStorage.removeItem('selectedElectionId');
+        localStorage.removeItem('hasSeenVotingInstructions');
+        localStorage.removeItem('language');
+    },
+
+    showAuthError: function(message) {
+        if (typeof Utils !== 'undefined' && typeof Utils.showMessage === 'function') {
+            Utils.showMessage(message, 'error');
+        } else {
+            alert(message);
+        }
+    },
+
+    resetAuthButtons: function() {
+        const googleSigninBtn = document.getElementById('googleSigninBtn');
+        if (googleSigninBtn) {
+            googleSigninBtn.disabled = false;
+            googleSigninBtn.innerHTML = '<i class="fab fa-google"></i> <span data-i18n="signInWithGoogle">Sign in with Google</span>';
+            if (typeof I18nModule !== 'undefined' && typeof I18nModule.applyTranslations === 'function') {
+                I18nModule.applyTranslations(googleSigninBtn);
+            }
+        }
+        const authSkeletonScreen = document.getElementById('authSkeletonScreen');
+        if (authSkeletonScreen) {
+            authSkeletonScreen.style.display = 'none';
         }
     }
 };
@@ -169,13 +152,24 @@ const AuthModule = {
 window.AuthModule = AuthModule;
 
 document.addEventListener('DOMContentLoaded', function () {
-    document.getElementById('googleSigninBtn')?.addEventListener('click', function (e) {
-        e.preventDefault();
-        AuthModule.signInWithGoogle();
-    });
+    const googleBtn = document.getElementById('googleSigninBtn');
+    const demoBtn = document.getElementById('demoAuthBtn');
+    
+    if (googleBtn) {
+        googleBtn.addEventListener('click', function (e) {
+            e.preventDefault();
+            if (typeof AuthModule !== 'undefined' && AuthModule.signInWithGoogle) {
+                AuthModule.signInWithGoogle();
+            }
+        });
+    }
 
-    document.getElementById('demoAuthBtn')?.addEventListener('click', function (e) {
-        e.preventDefault();
-        AuthModule.demoAuth();
-    });
+    if (demoBtn) {
+        demoBtn.addEventListener('click', function (e) {
+            e.preventDefault();
+            if (typeof AuthModule !== 'undefined' && AuthModule.demoAuth) {
+                AuthModule.demoAuth();
+            }
+        });
+    }
 });

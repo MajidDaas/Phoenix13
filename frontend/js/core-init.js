@@ -1,8 +1,7 @@
-// js/core-init.js - Core Application Initialization Logic
-
-// --- Ensure State exists ---
+// Ensure State exists
 window.State = window.State || {};
-// --- Ensure apiClient is available (it should be loaded before this) ---
+
+// Ensure apiClient is available
 if (typeof apiClient === 'undefined') {
     console.error("apiClient is not defined. Ensure js/api.js is loaded before js/core-init.js.");
 }
@@ -10,7 +9,7 @@ if (typeof apiClient === 'undefined') {
 document.addEventListener('DOMContentLoaded', async function () {
     console.log("Core initialization logic running...");
 
-    // --- Setup Tab Switching ---
+    // Setup Tab Switching
     document.querySelectorAll('.tab').forEach(button => {
         button.addEventListener('click', () => {
             const tabName = button.getAttribute('data-tab');
@@ -27,7 +26,7 @@ document.addEventListener('DOMContentLoaded', async function () {
         });
     });
 
-    // --- Setup Mobile Menu Toggle ---
+    // Setup Mobile Menu Toggle
     const mobileMenuToggle = document.getElementById('mobileMenuToggle');
     const headerNav = document.getElementById('headerNav');
     if (mobileMenuToggle && headerNav) {
@@ -39,7 +38,7 @@ document.addEventListener('DOMContentLoaded', async function () {
         });
     }
 
-    // --- Setup Voting Module Event Listeners ---
+    // Setup Voting Module Event Listeners
     if (typeof VotingModule !== 'undefined') {
         const candidateSearch = document.getElementById('candidateSearch');
         const sortVoteBy = document.getElementById('sortVoteBy');
@@ -52,20 +51,26 @@ document.addEventListener('DOMContentLoaded', async function () {
                 clearTimeout(searchTimeout);
                 searchTimeout = setTimeout(() => {
                     const filter = candidateSearch.value.trim();
-                    CandidateManager.loadCandidates({ filter: filter });
+                    if (typeof CandidatesModule !== 'undefined' && typeof CandidatesModule.loadCandidates === 'function') {
+                        CandidatesModule.loadCandidates({ filter: filter });
+                    }
                 }, 300); // Debounce
             });
         }
 
         if (sortVoteBy) {
             sortVoteBy.addEventListener('change', () => {
-                CandidateManager.loadCandidates({ sortBy: sortVoteBy.value });
+                if (typeof CandidatesModule !== 'undefined' && typeof CandidatesModule.loadCandidates === 'function') {
+                    CandidatesModule.loadCandidates({ sortBy: sortVoteBy.value });
+                }
             });
         }
 
         if (sortInfoBy) {
             sortInfoBy.addEventListener('change', () => {
-                CandidateManager.loadCandidates({ sortBy: sortInfoBy.value }); // Load for info tab
+                if (typeof CandidatesModule !== 'undefined' && typeof CandidatesModule.loadCandidates === 'function') {
+                    CandidatesModule.loadCandidates({ sortBy: sortInfoBy.value });
+                }
             });
         }
 
@@ -83,19 +88,27 @@ document.addEventListener('DOMContentLoaded', async function () {
         console.warn("VotingModule not found during core init.");
     }
 
-    // --- Setup Admin Module Event Listeners ---
+    // Setup Admin Module Event Listeners
     if (typeof AdminModule !== 'undefined') {
         const addCandidateForm = document.getElementById('addCandidateForm');
         const scheduleElectionBtn = document.getElementById('scheduleElectionBtn');
         const exportVotesBtn = document.getElementById('exportVotesBtn');
         const exportVotesToCSVBtn = document.getElementById('exportVotesToCSVBtn');
-        // const backupToCloudBtn = document.getElementById('backupToCloudBtn'); // Not implemented
 
         if (addCandidateForm) {
             addCandidateForm.addEventListener('submit', async (e) => {
                 e.preventDefault();
                 if (typeof AdminModule !== 'undefined' && AdminModule.addCandidate) {
-                    await AdminModule.addCandidate(new FormData(addCandidateForm));
+                    try {
+                        await AdminModule.addCandidate(new FormData(addCandidateForm));
+                    } catch (error) {
+                        console.error("Error adding candidate:", error);
+                        if (typeof Utils !== 'undefined' && typeof Utils.showMessage === 'function') {
+                            Utils.showMessage(`admin.addCandidateError|${error.message}`, 'error');
+                        } else {
+                            alert(`Error adding candidate: ${error.message}`);
+                        }
+                    }
                 } else {
                     console.error("AdminModule.addCandidate is not available.");
                 }
@@ -131,25 +144,11 @@ document.addEventListener('DOMContentLoaded', async function () {
                 }
             });
         }
-
-        // if (backupToCloudBtn) {
-        //     backupToCloudBtn.addEventListener('click', () => {
-        //         if (typeof AdminModule !== 'undefined' && AdminModule.backupToCloud) {
-        //             AdminModule.backupToCloud();
-        //         } else {
-        //             console.error("AdminModule.backupToCloud is not available.");
-        //         }
-        //     });
-        // }
     } else {
         console.warn("AdminModule not found during core init.");
     }
 
-    // --- Setup Results Module (if needed, e.g., for periodic refresh) ---
-    // Currently, results are loaded on tab switch. Could add periodic refresh here if desired.
-    // if (typeof ResultsModule !== 'undefined') { ... }
-
-    // --- Setup Instructions Popup ---
+    // Setup Instructions Popup
     const instructionsPopup = document.getElementById('instructionsPopup');
     const closeInstructionsPopup = document.getElementById('closeInstructionsPopup');
     const acknowledgeInstructions = document.getElementById('acknowledgeInstructions');
@@ -175,19 +174,6 @@ document.addEventListener('DOMContentLoaded', async function () {
             }
         });
     }
-
-    // --- Show Instructions Popup Logic (Conceptual) ---
-    // This logic might be better placed in core-main.js after initial auth/election check
-    // const hasSeenInstructions = localStorage.getItem('hasSeenVotingInstructions');
-    // if (!hasSeenInstructions && window.State.electionOpen && !window.State.userHasVoted) {
-    //     // Show popup after a short delay to allow UI to settle
-    //     setTimeout(() => {
-    //         if (typeof window.showInstructionsPopup === 'function') {
-    //             window.showInstructionsPopup();
-    //             localStorage.setItem('hasSeenVotingInstructions', 'true');
-    //         }
-    //     }, 1000);
-    // }
 
     console.log("Core initialization event listeners attached.");
 });

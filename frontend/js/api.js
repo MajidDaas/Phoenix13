@@ -1,27 +1,28 @@
-// js/api.js
-
 class APIClient {
     constructor() {
-        this.baseURL = '/api'; // Base URL for API endpoints
-        this.electionId = null; // Store the current election ID
+        this.baseURL = '/api';
+        this.electionId = null;
     }
 
-    // --- NEW: Set the current election ID ---
+    // Set the current election ID
     setCurrentElectionId(electionId) {
+        if (!electionId || typeof electionId !== 'string') {
+            throw new Error('Invalid election ID');
+        }
         this.electionId = electionId;
     }
 
-    // --- NEW: Get the current election ID ---
+    // Get the current election ID
     getCurrentElectionId() {
         return this.electionId;
     }
 
-    // --- NEW: Get list of elections accessible to the user ---
+    // Get list of elections accessible to the user
     async getElections() {
         try {
             const response = await fetch(`${this.baseURL}/elections`, {
                 method: 'GET',
-                credentials: 'include' // Include cookies/session
+                credentials: 'include'
             });
             if (!response.ok) {
                 const errorData = await response.json().catch(() => ({}));
@@ -34,7 +35,7 @@ class APIClient {
         }
     }
 
-    // --- NEW: Create a new election ---
+    // Create a new election
     async createElection(electionData) {
         try {
             const response = await fetch(`${this.baseURL}/elections`, {
@@ -56,15 +57,13 @@ class APIClient {
         }
     }
 
-    // --- MODIFIED: Generic request method to include election ID where needed ---
+    // Generic request method for election-specific endpoints
     async _makeRequest(endpoint, options = {}) {
         if (!this.electionId) {
-             console.error('No election ID set for API request:', endpoint);
-             throw new Error('No election selected. Please select an election first.');
+            throw new Error('No election selected. Please select an election first.');
         }
 
         const url = `${this.baseURL}/elections/${this.electionId}${endpoint}`;
-        // Ensure credentials are included
         options.credentials = options.credentials || 'include';
 
         try {
@@ -73,11 +72,11 @@ class APIClient {
                 const errorData = await response.json().catch(() => ({}));
                 throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
             }
-            // Attempt to parse JSON, but allow for non-JSON responses (like file exports)
+            
+            // Attempt to parse JSON, but allow for non-JSON responses
             try {
                 return await response.json();
             } catch (parseError) {
-                // If parsing fails, return the raw response (useful for file downloads)
                 console.warn(`Could not parse JSON for ${url}, returning raw response.`);
                 return response;
             }
@@ -87,12 +86,12 @@ class APIClient {
         }
     }
 
-    // --- MODIFIED: Candidate Endpoints ---
+    // Candidate Endpoints
     async getCandidates() {
         return this._makeRequest('/candidates');
     }
 
-    // --- MODIFIED: Vote Endpoints ---
+    // Vote Endpoints
     async submitVote(selectedCandidates, executiveCandidates) {
         const data = {
             selectedCandidates: selectedCandidates,
@@ -107,17 +106,17 @@ class APIClient {
         });
     }
 
-    // --- MODIFIED: Results Endpoint ---
+    // Results Endpoint
     async getResults() {
         return this._makeRequest('/results');
     }
 
-    // --- MODIFIED: Election Status Endpoint ---
+    // Election Status Endpoint
     async getElectionStatus() {
         return this._makeRequest('/election/status');
     }
 
-    // --- MODIFIED: Admin Endpoints ---
+    // Admin Endpoints
     async getAdminCandidates() {
         return this._makeRequest('/admin/candidates');
     }
@@ -158,78 +157,84 @@ class APIClient {
         });
     }
 
-    // --- MODIFIED: Export Votes (JSON) ---
-    // This returns the raw fetch Response object for file handling
+    // Export Votes (JSON)
     async exportVotes() {
-        // _makeRequest handles the URL construction and error checking
-        // but we return the raw response for file download handling
         const response = await this._makeRequest('/admin/votes/export', {
-             method: 'GET',
-             // Do not set Content-Type for GET requests fetching a file
+            method: 'GET'
         });
-        // The _makeRequest catch block handles HTTP errors
-        // Return the raw response object for the caller to handle (e.g., blob())
         return response;
     }
 
-    // --- MODIFIED: Export Votes (CSV) ---
-    // This also returns the raw fetch Response object
+    // Export Votes (CSV)
     async exportVotesToCSV() {
-         const response = await this._makeRequest('/admin/votes/export/csv', {
-             method: 'GET',
-             // Do not set Content-Type for GET requests fetching a file
-         });
-         // The _makeRequest catch block handles HTTP errors
-         return response;
+        const response = await this._makeRequest('/admin/votes/export/csv', {
+            method: 'GET'
+        });
+        return response;
     }
 
-    // --- MODIFIED: Session Endpoint (Global, no election ID needed) ---
+    // Session Endpoint (Global)
     async getSession() {
-        // This endpoint is global, not election-specific
         try {
             const response = await fetch(`${this.baseURL}/auth/session`, {
                 method: 'GET',
                 credentials: 'include'
             });
+            if (response.status === 401) {
+                return { authenticated: false };
+            }
             if (!response.ok) {
                 const errorData = await response.json().catch(() => ({}));
-                // If it's a 401, it just means not authenticated, which is not an error to throw
-                if(response.status === 401) {
-                    return { authenticated: false };
-                }
                 throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
             }
             return await response.json();
         } catch (error) {
             console.error('API Error fetching session:', error);
-            // Re-throw for global error handling if needed, or return a default unauthenticated state
-            throw error;
-            // Or, return a default: return { authenticated: false };
+            return { authenticated: false };
         }
     }
 
-    // --- MODIFIED: Logout Endpoint (Global, no election ID needed) ---
-     async logout() {
-         // This endpoint is global, not election-specific
-         try {
-             const response = await fetch(`${this.baseURL}/auth/logout`, {
-                 method: 'POST',
-                 credentials: 'include'
-             });
-             if (!response.ok) {
-                 const errorData = await response.json().catch(() => ({}));
-                 throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
-             }
-             return await response.json();
-         } catch (error) {
-             console.error('API Error during logout:', error);
-             throw error;
-         }
-     }
+    // Logout Endpoint (Global)
+    async logout() {
+        try {
+            const response = await fetch(`${this.baseURL}/auth/logout`, {
+                method: 'POST',
+                credentials: 'include'
+            });
+            if (!response.ok) {
+                const errorData = await response.json().catch(() => ({}));
+                throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
+            }
+            return await response.json();
+        } catch (error) {
+            console.error('API Error during logout:', error);
+            throw error;
+        }
+    }
 
-    // --- MODIFIED: Translations Endpoint (Global, no election ID needed) ---
+    // Demo Auth Endpoint (Global)
+    async demoAuth() {
+        try {
+            const response = await fetch(`${this.baseURL}/auth/demo`, {
+                method: 'POST',
+                credentials: 'include',
+                headers: {
+                    'Content-Type': 'application/json'
+                }
+            });
+            if (!response.ok) {
+                const errorData = await response.json().catch(() => ({}));
+                throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
+            }
+            return await response.json();
+        } catch (error) {
+            console.error('API Error during demo auth:', error);
+            throw error;
+        }
+    }
+
+    // Translations Endpoint (Global)
     async getTranslations() {
-        // This endpoint is global, not election-specific
         try {
             const response = await fetch(`${this.baseURL}/translations`);
             if (!response.ok) {

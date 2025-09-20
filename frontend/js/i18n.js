@@ -1,82 +1,90 @@
-// i18n.js - Internationalization and language switching logic
-
 const I18nModule = {
-    // --- Fetch Translations ---
+    translations: {},
+    currentLanguage: 'en',
+
+    // Fetch Translations
     fetchTranslations: async function() {
         try {
             const response = await fetch('/api/translations');
             if (!response.ok) {
                 throw new Error(`HTTP error! status: ${response.status}`);
             }
-            translations = await response.json(); // `translations` is global in core.js
-            console.log("Translations fetched from backend:", translations);
+            this.translations = await response.json();
+            console.log("Translations fetched from backend:", this.translations);
         } catch (error) {
             console.error("Failed to fetch translations from backend:", error);
+            this.translations = { en: {}, ar: {} }; // Fallback
         }
     },
 
-// --- Switch Language ---
-switchLanguage: function(lang) {
-    if (lang && translations && typeof translations === 'object' && translations[lang]) {
-        currentLanguage = lang; // `currentLanguage` is global in core.js
+    // Initialize i18n module
+    initialize: async function() {
+        await this.fetchTranslations();
+        // Set initial language based on browser or stored preference
+        const storedLang = localStorage.getItem('language');
+        if (storedLang && this.translations[storedLang]) {
+            this.currentLanguage = storedLang;
+        }
         this.applyTranslations();
+    },
 
-        const langSwitcher = document.getElementById('languageSwitcher');
-        if (langSwitcher) {
-            // Set the button text to "English" if current is Arabic, and "عربي" if current is English.
-            const buttonText = currentLanguage === 'en' ? 'عربي' : 'English';
-            // OR, if you prefer to use the translation keys for consistency:
-            // const buttonText = currentLanguage === 'en' ? (translations['ar']['switchToArabic'] || 'عربي') : (translations['en']['switchToEnglish'] || 'English');
+    // Switch Language
+    switchLanguage: function(lang) {
+        if (lang && this.translations && typeof this.translations === 'object' && this.translations[lang]) {
+            this.currentLanguage = lang;
+            localStorage.setItem('language', lang);
+            this.applyTranslations();
 
-            langSwitcher.textContent = buttonText;
-            langSwitcher.setAttribute('data-lang', currentLanguage);
+            const langSwitcher = document.getElementById('languageSwitcher');
+            if (langSwitcher) {
+                const buttonText = this.currentLanguage === 'en' ? 'عربي' : 'English';
+                langSwitcher.textContent = buttonText;
+                langSwitcher.setAttribute('data-lang', this.currentLanguage);
+            }
+
+            document.body.classList.toggle('rtl', this.currentLanguage === 'ar');
+        } else {
+            console.warn(`Cannot switch to language '${lang}'. It's not available in the loaded translations.`);
         }
+    },
 
-        document.body.classList.toggle('rtl', currentLanguage === 'ar');
-    } else {
-        console.warn(`Cannot switch to language '${lang}'. It's not available in the loaded translations.`);
-    }
-},
-
-    // --- Apply Translations ---
-    applyTranslations: function() {
-        if (!translations[currentLanguage]) {
-             console.warn(`Translations for language '${currentLanguage}' are not loaded.`);
-             return;
+    // Apply Translations
+    applyTranslations: function(container = document) {
+        if (!this.translations[this.currentLanguage]) {
+            console.warn(`Translations for language '${this.currentLanguage}' are not loaded.`);
+            return;
         }
-        const elementsToTranslate = document.querySelectorAll('[data-i18n]');
+        
+        const elementsToTranslate = container.querySelectorAll('[data-i18n]');
         elementsToTranslate.forEach(element => {
             const fullKey = element.getAttribute('data-i18n');
             const parts = fullKey.split('|');
             const key = parts[0];
-            const attr = parts[1] || 'textContent'; // ✅ Default to textContent if no attribute specified
+            const attr = parts[1] || 'textContent';
 
-            const translation = translations[currentLanguage][key];
+            const translation = this.translations[this.currentLanguage][key];
             if (translation !== undefined && translation !== null) {
                 if (element.dataset.i18nParams) {
-                     try {
-                         const params = JSON.parse(element.dataset.i18nParams);
-                         let translatedText = translation;
-                         for (const [paramKey, paramValue] of Object.entries(params)) {
-                             translatedText = translatedText.replace(new RegExp(`{${paramKey}}`, 'g'), paramValue);
-                         }
-                         // ✅ Apply to correct target
-                         if (attr === 'textContent') {
-                             element.textContent = translatedText;
-                         } else {
-                             element.setAttribute(attr, translatedText);
-                         }
-                     } catch (e) {
-                         console.error("Error parsing i18n params for key:", key, e);
-                         // ✅ Fallback: apply to correct target
-                         if (attr === 'textContent') {
-                             element.textContent = translation;
-                         } else {
-                             element.setAttribute(attr, translation);
-                         }
-                     }
+                    try {
+                        const params = JSON.parse(element.dataset.i18nParams);
+                        let translatedText = translation;
+                        for (const [paramKey, paramValue] of Object.entries(params)) {
+                            translatedText = translatedText.replace(new RegExp(`{${paramKey}}`, 'g'), paramValue);
+                        }
+                        if (attr === 'textContent') {
+                            element.textContent = translatedText;
+                        } else {
+                            element.setAttribute(attr, translatedText);
+                        }
+                    } catch (e) {
+                        console.error("Error parsing i18n params for key:", key, e);
+                        if (attr === 'textContent') {
+                            element.textContent = translation;
+                        } else {
+                            element.setAttribute(attr, translation);
+                        }
+                    }
                 } else {
-                    // ✅ Apply to correct target — THIS IS THE ONLY CHANGE
                     if (attr === 'textContent') {
                         element.textContent = translation;
                     } else {
@@ -85,16 +93,16 @@ switchLanguage: function(lang) {
                 }
             } else {
                 if (key) {
-                     console.warn(`Translation key '${key}' not found for language '${currentLanguage}'`);
+                    console.warn(`Translation key '${key}' not found for language '${this.currentLanguage}'`);
                 }
             }
         });
         this.updateSortingOptions();
     },
 
-    // --- Update Sorting Options ---
+    // Update Sorting Options
     updateSortingOptions: function() {
-        if (!translations[currentLanguage]) return;
+        if (!this.translations[this.currentLanguage]) return;
 
         const sortVoteSelect = document.getElementById('sortVoteBy');
         if (sortVoteSelect) {
@@ -109,8 +117,8 @@ switchLanguage: function(lang) {
                     case 'activity-asc': key = 'sortByActivityAsc'; break;
                     default: return;
                 }
-                if (translations[currentLanguage][key] !== undefined) {
-                    option.textContent = translations[currentLanguage][key];
+                if (this.translations[this.currentLanguage][key] !== undefined) {
+                    option.textContent = this.translations[this.currentLanguage][key];
                 }
             });
         }
@@ -128,8 +136,8 @@ switchLanguage: function(lang) {
                     case 'activity-asc': key = 'sortByActivityAsc'; break;
                     default: return;
                 }
-                if (translations[currentLanguage][key] !== undefined) {
-                    option.textContent = translations[currentLanguage][key];
+                if (this.translations[this.currentLanguage][key] !== undefined) {
+                    option.textContent = this.translations[this.currentLanguage][key];
                 }
             });
         }
